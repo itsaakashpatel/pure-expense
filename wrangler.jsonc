@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "pure-expense",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-04-07",
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pure-expense",
+      "database_id": "48c700dd-9aab-4653-a144-6471a635014c",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "OPENAI_MODEL": "gpt-4.1-mini",
+    "REQUIRE_CLOUDFLARE_ACCESS": "false"
+  }
+}

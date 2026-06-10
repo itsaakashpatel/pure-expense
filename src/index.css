@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Oat theme variable overrides — maps our copper/warm editorial palette */
+  --background: #faf8f4;
+  --foreground: #1a140f;
+  --card: #ffffff;
+  --card-foreground: #1a140f;
+  --primary: #bf6f43;
+  --primary-foreground: #ffffff;
+  --secondary: #f3efe8;
+  --secondary-foreground: #2d221b;
+  --muted: #f3efe8;
+  --muted-foreground: #6b5748;
+  --faint: #faf8f4;
+  --faint-foreground: #9a8478;
+  --accent: #f3efe8;
+  --accent-foreground: #2d221b;
+  --danger: #dc2626;
+  --danger-foreground: #ffffff;
+  --success: #166534;
+  --success-foreground: #dcfce7;
+  --warning: #92400e;
+  --warning-foreground: #fffbeb;
+  --border: rgba(61, 45, 31, 0.18);
+  --input: rgba(61, 45, 31, 0.18);
+  --ring: #bf6f43;
+
+  /* Flat editorial: remove all border-radius from oat components */
+  --radius-small: 0;
+  --radius-medium: 0;
+  --radius-large: 0;
+  --radius-full: 0;
+  /* Backgrounds */
+  --bg: #faf8f4;
+  --bg-subtle: #f3efe8;
+  --panel: #ffffff;
+
+  /* Borders */
+  --line: rgba(61, 45, 31, 0.1);
+  --line-strong: rgba(61, 45, 31, 0.18);
+
+  /* Text */
+  --text-strong: #1a140f;
+  --text-base: #2d221b;
+  --text-soft: #6b5748;
+  --text-muted: #9a8478;
+
+  /* Accent — warm copper */
+  --accent: #bf6f43;
+  --accent-dark: #a85c34;
+  --accent-light: #d7aa7d;
+
+  /* Navigation (dark ink) */
+  --nav-bg: #1e1410;
+  --nav-border: rgba(255, 247, 238, 0.07);
+
+  /* Status */
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+
+  /* Typography */
+  --sans: 'Circular Std', 'Avenir Next', 'Inter', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', 'Fira Mono', 'Roboto Mono', monospace;
+
+  color: var(--text-base);
+  background: var(--bg);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: var(--text-strong);
+}
+
+#root {
+  min-height: 100vh;
+}
