@@ -1,0 +1,6 @@
+# Copy to worker/.dev.vars for local development (gitignored).
+# The mobile app must send `Authorization: Bearer <AUTH_TOKEN>`.
+AUTH_TOKEN="dev-secret-change-me"
+
+# Optional: only needed if you swap PARSE_MODEL to an OpenAI model in parse-llm.ts
+# OPENAI_API_KEY="sk-..."

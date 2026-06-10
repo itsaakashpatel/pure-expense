@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pure — Receipt Expenses</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  html, body { margin: 0; height: 100%; background: #DEDEE1; }
+  body { font-family: 'Schibsted Grotesk', system-ui, sans-serif; }
+  #root { height: 100%; }
+  .stagebg {
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(120% 90% at 50% -10%, #E9E9EC 0%, #D9D9DD 55%, #CFCFD3 100%);
+  }
+  .jump { -webkit-tap-highlight-color: transparent; }
+  .jump::-webkit-scrollbar { display: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="ui.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="screensA.jsx"></script>
+<script type="text/babel" src="screensB.jsx"></script>
+<script type="text/babel" src="screensC.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0A0A0A",
+  "dark": false,
+  "radius": 22,
+  "catStyle": "mono"
+}/*EDITMODE-END*/;
+
+// category palettes
+const CAT_PALETTES = {
+  mono:  ['#161616','#3A3A3D','#5C5C61','#828289','#A8A8AE','#CBCBD0'],
+  warm:  ['#1A1714','#4A3B2E','#7A6248','#A98C63','#C9B393','#E2D6C1'],
+  cool:  ['#10161C','#27384A','#3E5670','#5E7894','#8AA0B6','#BcCAD6'],
+};
+
+function applyTheme(t) {
+  const r = document.documentElement.style;
+  r.setProperty('--accent', t.accent);
+  r.setProperty('--radius', t.radius + 'px');
+  // dark/light tokens
+  if (t.dark) {
+    r.setProperty('--ink', '#FFFFFF');
+    r.setProperty('--ink-2', '#A2A2A8');
+    r.setProperty('--ink-3', '#6A6A70');
+    r.setProperty('--canvas', '#000000');
+    r.setProperty('--surface', '#141416');
+    r.setProperty('--hair', '#28282B');
+    r.setProperty('--hair-2', '#1B1B1E');
+    r.setProperty('--accent', t.accent === '#0A0A0A' ? '#FFFFFF' : t.accent);
+    r.setProperty('--accent-ink', t.accent === '#0A0A0A' ? '#0A0A0A' : '#FFFFFF');
+  } else {
+    r.setProperty('--ink', '#0A0A0A');
+    r.setProperty('--ink-2', '#5E5E63');
+    r.setProperty('--ink-3', '#9A9AA0');
+    r.setProperty('--canvas', '#F4F4F5');
+    r.setProperty('--surface', '#FFFFFF');
+    r.setProperty('--hair', '#ECECEE');
+    r.setProperty('--hair-2', '#F3F3F4');
+    r.setProperty('--accent-ink', '#FFFFFF');
+  }
+  const pal = CAT_PALETTES[t.catStyle] || CAT_PALETTES.mono;
+  const names = ['food','groceries','transport','shopping','travel','utilities'];
+  const order = t.dark ? [...pal].reverse() : pal;
+  names.forEach((n, i) => r.setProperty('--c-' + n, order[i]));
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [view, setView] = useState('onboarding');   // onboarding|dashboard|history|detail
+  const [overlay, setOverlay] = useState(null);      // null|scan|verify
+  const [saved, setSaved] = useState(false);
+  const [detailTxn, setDetailTxn] = useState(null);
+  const [backTo, setBackTo] = useState('dashboard');
+  const [savedExpense, setSavedExpense] = useState(null);
+  const [scale, setScale] = useState(1);
+
+  useEffect(() => { applyTheme(t); }, [t]);
+
+  // fit-to-viewport scaling
+  const W = 402, H = 874;
+  useEffect(() => {
+    const fit = () => {
+      const availH = window.innerHeight - 86;   // header room
+      const availW = window.innerWidth - 32;
+      setScale(Math.min(1, availW / W, availH / H));
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+
+  const openTxn = (txn) => { setBackTo(view); setDetailTxn(txn); setView('detail'); };
+  const startScan = () => setOverlay('scan');
+  const onCaptured = () => setOverlay('verify');
+  const onSave = ({ merchant, cat, amount }) => {
+    setSavedExpense({ id: 'new', merchant, cat, amount, time: '1:24 PM', method: 'Visa ·· 4021' });
+    setOverlay(null);
+    setSaved(true);
+    setTimeout(() => { setSaved(false); setView('dashboard'); }, 1300);
+  };
+
+  const tabActive = (view === 'dashboard' || view === 'history') && !overlay;
+  const deviceDark = t.dark || overlay === 'scan';
+
+  // current in-phone screen
+  let screen = null;
+  if (view === 'onboarding') screen = <Onboarding onStart={startScan} />;
+  else if (view === 'dashboard') screen = <Dashboard onOpenTxn={openTxn} onSeeAll={() => setView('history')} />;
+  else if (view === 'history') screen = <History onOpenTxn={openTxn} extra={savedExpense} />;
+  else if (view === 'detail') screen = <Detail t={detailTxn} onBack={() => setView(backTo)} />;
+
+  const jump = [
+    ['Onboarding', () => { setOverlay(null); setView('onboarding'); }],
+    ['Dashboard',  () => { setOverlay(null); setView('dashboard'); }],
+    ['Scan',       () => { setView('dashboard'); setOverlay('scan'); }],
+    ['Verify',     () => { setView('dashboard'); setOverlay('verify'); }],
+    ['History',    () => { setOverlay(null); setView('history'); }],
+    ['Detail',     () => { setOverlay(null); openTxn(TXNS[2].items[0]); }],
+  ];
+  const activeJump = overlay || view;
+  const jumpKey = { scan: 'Scan', verify: 'Verify', onboarding: 'Onboarding', dashboard: 'Dashboard', history: 'History', detail: 'Detail' }[activeJump];
+
+  return (
+    <div className="stagebg">
+      {/* review header */}
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 54, zIndex: 100,
+        display: 'flex', alignItems: 'center', gap: 16, padding: '0 18px',
+        borderBottom: '1px solid rgba(0,0,0,.07)', background: 'rgba(245,245,247,.72)',
+        backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexShrink: 0 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 7, background: '#0A0A0A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: 9, height: 9, borderRadius: 2.5, border: '2px solid #fff' }} />
+          </div>
+          <span style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em', color: '#0A0A0A' }}>Pure</span>
+          <span style={{ fontSize: 12.5, color: '#8A8A90', fontWeight: 500 }}>iOS · CAD</span>
+        </div>
+        <div className="jump" style={{ display: 'flex', gap: 6, overflowX: 'auto', flex: 1, paddingRight: 4 }}>
+          {jump.map(([label, fn]) => {
+            const on = label === jumpKey;
+            return (
+              <button key={label} onClick={fn} style={{
+                flexShrink: 0, height: 30, padding: '0 13px', borderRadius: 999, cursor: 'pointer',
+                fontFamily: 'inherit', fontSize: 12.5, fontWeight: 600, whiteSpace: 'nowrap',
+                border: '1px solid ' + (on ? '#0A0A0A' : 'rgba(0,0,0,.12)'),
+                background: on ? '#0A0A0A' : 'transparent', color: on ? '#fff' : '#48484C',
+                transition: 'all .15s',
+              }}>{label}</button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* phone stage */}
+      <div style={{ position: 'fixed', top: 54, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ transform: `scale(${scale})`, transformOrigin: 'center', width: W, height: H }}>
+          <IOSDevice width={W} height={H} dark={deviceDark}>
+            <div style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+              {screen}
+
+              {/* tab bar */}
+              {tabActive && (
+                <TabBar view={view} onHome={() => setView('dashboard')} onHistory={() => setView('history')} onScan={startScan} />
+              )}
+
+              {/* overlays */}
+              {overlay === 'scan' && <Scan onClose={() => setOverlay(null)} onCaptured={onCaptured} />}
+              {overlay === 'verify' && <Verify onClose={() => setOverlay(null)} onSave={onSave} />}
+              {saved && <SavedToast />}
+            </div>
+          </IOSDevice>
+        </div>
+      </div>
+
+      <TweaksPanel>
+        <TweakSection label="Brand" />
+        <TweakColor label="Accent" value={t.accent}
+          options={['#0A0A0A', '#1F6FEB', '#16855A', '#C2410C', '#6D28D9']}
+          onChange={(v) => setTweak('accent', v)} />
+        <TweakToggle label="Dark mode" value={t.dark} onChange={(v) => setTweak('dark', v)} />
+        <TweakSection label="Categories" />
+        <TweakRadio label="Ramp" value={t.catStyle} options={['mono', 'warm', 'cool']}
+          onChange={(v) => setTweak('catStyle', v)} />
+        <TweakSection label="Shape" />
+        <TweakSlider label="Corner radius" value={t.radius} min={8} max={30} step={1} unit="px"
+          onChange={(v) => setTweak('radius', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+function TabBar({ view, onHome, onHistory, onScan }) {
+  const item = (name, label, active, onClick) => (
+    <button className="tap" onClick={onClick} style={{
+      flex: 1, background: 'none', border: 'none', cursor: 'pointer', padding: '8px 0 0',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+      color: active ? 'var(--ink)' : 'var(--ink-3)', fontFamily: 'var(--font)',
+    }}>
+      <Icon name={name} size={24} sw={active ? 2.1 : 1.75} />
+      <span style={{ fontSize: 10.5, fontWeight: active ? 700 : 500, letterSpacing: '.01em' }}>{label}</span>
+    </button>
+  );
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 30,
+      paddingBottom: 30, paddingTop: 6,
+      background: 'color-mix(in srgb, var(--surface) 86%, transparent)',
+      backdropFilter: 'blur(18px) saturate(180%)', WebkitBackdropFilter: 'blur(18px) saturate(180%)',
+      borderTop: '1px solid var(--hair)' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', padding: '0 14px' }}>
+        {item('home', 'Home', view === 'dashboard', onHome)}
+        {/* center scan */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+          <button className="tap" onClick={onScan} aria-label="Scan" style={{
+            width: 60, height: 60, borderRadius: 20, marginTop: -16, cursor: 'pointer',
+            background: 'var(--accent)', color: 'var(--accent-ink)', border: 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 10px 22px rgba(0,0,0,.24)',
+          }}>
+            <Icon name="scan" size={28} sw={1.9} stroke="var(--accent-ink)" />
+          </button>
+        </div>
+        {item('list', 'History', view === 'history', onHistory)}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

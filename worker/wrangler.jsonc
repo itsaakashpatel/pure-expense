@@ -1,0 +1,37 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pure-expense",
+  "main": "src/index.ts",
+  "account_id": "af0ec8a493c6e399108713177a57d0e5",
+  "compatibility_date": "2026-06-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Workers AI text model used to structure OCR text. Swap to an OpenAI
+    // model id (and add an OPENAI_API_KEY secret) to change providers.
+    "PARSE_MODEL": "@cf/meta/llama-3.1-8b-instruct"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "pure-expense",
+      "database_id": "48c700dd-9aab-4653-a144-6471a635014c",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "RECEIPTS",
+      "bucket_name": "pure-expense"
+    }
+  ],
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  }
+  // Secret (set with `wrangler secret put AUTH_TOKEN`):
+  //   AUTH_TOKEN  — shared bearer token the mobile app sends.
+  // For local dev, put it in worker/.dev.vars instead.
+}

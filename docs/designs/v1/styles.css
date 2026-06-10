@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --font: 'Schibsted Grotesk', -apple-system, system-ui, sans-serif;
+  --ink: #0A0A0A;
+  --ink-2: #5E5E63;
+  --ink-3: #9A9AA0;
+  --canvas: #F4F4F5;
+  --surface: #FFFFFF;
+  --hair: #ECECEE;
+  --hair-2: #F3F3F4;
+  --accent: #0A0A0A;
+  --accent-ink: #FFFFFF;
+  --radius: 22px;
+  --radius-sm: 14px;
+  /* category mono ramp */
+  --c-food: #161616;
+  --c-groceries: #3A3A3D;
+  --c-transport: #5C5C61;
+  --c-shopping: #828289;
+  --c-travel: #A8A8AE;
+  --c-utilities: #CBCBD0;
+}
+
+* { box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+.scr {
+  position: absolute; inset: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  background: var(--canvas);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.scr-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.scr-scroll::-webkit-scrollbar { display: none; }
+
+.tnum { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum' 1; }
+
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--hair);
+}
+
+/* tap feedback */
+.tap { cursor: pointer; transition: transform .12s ease, opacity .12s ease, background .15s ease; -webkit-tap-highlight-color: transparent; }
+.tap:active { transform: scale(0.975); opacity: .9; }
+
+.btn-primary {
+  background: var(--accent); color: var(--accent-ink);
+  border: none; border-radius: 999px;
+  font-family: var(--font); font-weight: 600;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: transform .12s ease, opacity .12s ease;
+}
+.btn-primary:active { transform: scale(0.97); opacity: .92; }
+
+.eyebrow {
+  font-size: 12px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+
+@keyframes scanline {
+  0% { top: 8%; opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { top: 92%; opacity: 0; }
+}
+@keyframes fadeUp {
+  from { transform: translateY(12px); }
+  to { transform: translateY(0); }
+}
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.fade-up { animation: fadeUp .5s cubic-bezier(.2,.7,.2,1) both; }

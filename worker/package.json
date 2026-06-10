@@ -1,0 +1,30 @@
+{
+  "name": "@pure-expense/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:lan": "CLOUDFLARE_ACCOUNT_ID=af0ec8a493c6e399108713177a57d0e5 wrangler dev --ip 0.0.0.0 --port 8787",
+    "deploy": "wrangler deploy",
+    "db:generate": "drizzle-kit generate",
+    "migrate:local": "wrangler d1 migrations apply pure-expense --local",
+    "migrate:remote": "wrangler d1 migrations apply pure-expense --remote",
+    "seed:local": "wrangler d1 execute pure-expense --local --file=./seed.sql",
+    "seed:remote": "wrangler d1 execute pure-expense --remote --file=./seed.sql",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.38.3",
+    "hono": "^4.6.14",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "drizzle-kit": "^0.30.1",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.42.0"
+  }
+}

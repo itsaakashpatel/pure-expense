@@ -1,0 +1,20 @@
+{
+  "name": "pure-expense",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Private receipt-scanning expense tracker — Expo iOS app + Cloudflare Worker API",
+  "license": "MIT",
+  "workspaces": [
+    "worker",
+    "mobile"
+  ],
+  "scripts": {
+    "worker:dev": "npm --workspace worker run dev",
+    "worker:dev:lan": "npm --workspace worker run dev:lan",
+    "worker:deploy": "npm --workspace worker run deploy",
+    "worker:migrate": "npm --workspace worker run migrate:local",
+    "db:generate": "npm --workspace worker run db:generate",
+    "mobile:start": "npm --workspace mobile run start",
+    "mobile:ios": "npm --workspace mobile run ios"
+  }
+}
