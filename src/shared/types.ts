@@ -1,6 +1,6 @@
 export type CategoryKind = 'expense' | 'income'
-export type ImportMode = 'historical-summary' | 'statement'
-export type SourceType = 'historical_summary_csv' | 'statement_csv' | 'statement_pdf'
+export type ImportMode = 'statement'
+export type SourceType = 'statement_csv' | 'statement_pdf'
 export type ParsingStatus =
   | 'parsed'
   | 'review_ready'
@@ -65,38 +65,9 @@ export interface ImportRow {
   aiReasoning: string
 }
 
-export interface MonthlySnapshot {
-  id: string
-  importId: string
-  month: string
-  categoryId: string | null
-  amountCents: number
-  currency: string
-  section: CategoryKind
-  note: string
-}
-
-export interface HistoricalEntry {
-  id: string
-  importId: string
-  snapshotId: string | null
-  month: string
-  categoryId: string | null
-  amountCents: number
-  currency: string
-  section: CategoryKind
-  displayOrder: number
-  entryLabel: string
-  rowNote: string
-  sourceRowIndex: number
-  sourceColumnIndex: number
-}
-
 export interface ImportDetailResponse {
   import: ImportSummary
   rows: ImportRow[]
-  snapshots: MonthlySnapshot[]
-  historicalEntries: HistoricalEntry[]
   categories: Category[]
 }
 
@@ -108,21 +79,33 @@ export interface DashboardCategorySummary {
   categoryId: string | null
   categoryName: string
   amountCents: number
-  source: 'transactions' | 'snapshots'
+  source: 'transactions'
 }
 
 export interface DashboardMonthSummary {
   month: string
   totalCents: number
-  source: 'transactions' | 'snapshots'
+  source: 'transactions'
+}
+
+export interface CategoryTrendPoint {
+  month: string
+  amountCents: number
+}
+
+export interface CategoryTrend {
+  categoryId: string
+  categoryName: string
+  monthlyAmounts: CategoryTrendPoint[]
 }
 
 export interface DashboardResponse {
   currentMonth: string
   totalCents: number
-  source: 'transactions' | 'snapshots'
+  source: 'transactions'
   categoryBreakdown: DashboardCategorySummary[]
   trend: DashboardMonthSummary[]
+  categoryTrends: CategoryTrend[]
   recentImports: ImportSummary[]
 }
 
@@ -137,15 +120,33 @@ export interface TransactionRecord {
   categoryId: string | null
   categoryName: string | null
   sourceType: SourceType
+  isConfirmed: boolean
   createdAt: string
+}
+
+export interface UpdateTransactionRequest {
+  id: string
+  categoryId?: string | null
+  isConfirmed?: boolean
+}
+
+export interface BulkDeleteTransactionsRequest {
+  ids: string[]
+}
+
+export interface BulkUpdateTransactionsRequest {
+  ids: string[]
+  categoryId?: string | null
+  isConfirmed?: boolean
 }
 
 export interface TransactionsResponse {
   selectedMonth: string
   months: DashboardMonthSummary[]
   transactions: TransactionRecord[]
-  snapshots: MonthlySnapshot[]
-  historicalEntries: HistoricalEntry[]
+  total?: number
+  offset?: number
+  limit?: number
 }
 
 export interface CommitImportRequest {

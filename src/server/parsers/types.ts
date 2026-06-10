@@ -1,4 +1,4 @@
-import type { CategoryKind, ImportMode, SourceType } from '../../shared/types'
+import type { ImportMode, SourceType } from '../../shared/types'
 
 export interface ParsedImportRow {
   occurredAt: string | null
@@ -12,26 +12,6 @@ export interface ParsedImportRow {
   rawLine: string
 }
 
-export interface ParsedSummarySnapshot {
-  month: string
-  categoryName: string
-  amountCents: number
-  section: CategoryKind
-  note: string
-}
-
-export interface ParsedHistoricalEntry {
-  month: string
-  categoryName: string
-  amountCents: number
-  section: CategoryKind
-  displayOrder: number
-  entryLabel: string
-  rowNote: string
-  sourceRowIndex: number
-  sourceColumnIndex: number
-}
-
 export interface ParsedFileResult {
   importMode: ImportMode
   sourceType: SourceType
@@ -39,8 +19,6 @@ export interface ParsedFileResult {
   statementMonth: string | null
   currency: string
   rows: ParsedImportRow[]
-  snapshots: ParsedSummarySnapshot[]
-  historicalEntries: ParsedHistoricalEntry[]
   notes: string[]
   warnings: string[]
 }

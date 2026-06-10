@@ -23,104 +23,52 @@ interface OpenAiEnv {
   OPENAI_MODEL?: string
 }
 
+const CATEGORY_KEYWORDS: Array<{ keywords: string[]; slugHint: string }> = [
+  { keywords: ['coffee', 'latte', 'cafe', 'starbucks', 'tim hortons', 'second cup'], slugHint: 'coffee' },
+  { keywords: ['grocery', 'superstore', 'whole foods', 'freshco', 'loblaws', 'metro', 'no frills', 'sobeys', 't t ', 'farm boy', 'costco'], slugHint: 'groceries' },
+  { keywords: ['uber', 'lyft', 'ferry', 'transit', 'bus ', 'sky train', 'taxi', 'parking', 'gas ', 'petro', 'esso', 'shell ', 'flight', 'airline', 'hotel'], slugHint: 'travelling' },
+  { keywords: ['rent', 'landlord', 'e transfer'], slugHint: 'rent' },
+  { keywords: ['hydro', 'internet', 'telus', 'rogers', 'bell ', 'shaw', 'bc hydro', 'fortis', 'enbridge', 'water', 'gas bill'], slugHint: 'utilities' },
+  { keywords: ['mobile', 'wireless', 'cellular', 'koodo', 'fido', 'freedom'], slugHint: 'mobile' },
+  { keywords: ['dinner', 'restaurant', 'eat', 'pizza', 'sushi', 'burger', 'mcdonalds', 'subway', 'kfc', 'doordash', 'skip', 'uber eats', 'grubhub', 'bar '], slugHint: 'dinners' },
+  { keywords: ['ikea', 'bed bath', 'canadian tire', 'home depot', 'rona', 'hardware', 'home goods', 'the bay', 'winners'], slugHint: 'household-items' },
+  { keywords: ['amazon', 'walmart', 'target', 'zara', 'h m', 'uniqlo', 'sport chek', 'bestbuy', 'apple store'], slugHint: 'shopping' },
+  { keywords: ['netflix', 'spotify', 'apple', 'google', 'microsoft', 'adobe', 'subscription', 'prime', 'hulu', 'disney', 'youtube'], slugHint: 'subscriptions' },
+  { keywords: ['gift', 'flowers', '1 800'], slugHint: 'gifts' },
+  { keywords: ['salon', 'spa', 'pharmacy', 'shoppers', 'rexall', 'london drugs', 'barber', 'haircut', 'gym', 'fitness', 'yoga', 'doctor', 'dental', 'optom'], slugHint: 'personal' },
+]
+
 function heuristicSuggestion(
   row: CategorizationInput,
   categories: Category[],
 ): CategorizationSuggestion {
   const haystack = normalizeMerchant(`${row.merchantRaw} ${row.descriptionRaw}`)
-  const scoreBySlug = new Map<string, number>()
+  const scoreById = new Map<string, number>()
 
-  const boost = (slug: string, amount: number) => {
-    scoreBySlug.set(slug, (scoreBySlug.get(slug) ?? 0) + amount)
+  const activeCategories = categories.filter((c) => c.kind === 'expense' && c.isActive)
+  const slugToCategory = new Map<string, Category>()
+  for (const cat of activeCategories) {
+    slugToCategory.set(cat.slug, cat)
   }
 
-  // Coffee
-  if (haystack.includes('coffee') || haystack.includes('latte') || haystack.includes('cafe') ||
-      haystack.includes('starbucks') || haystack.includes('tim hortons') || haystack.includes('second cup')) {
-    boost('coffee', 5)
-  }
-  // Groceries
-  if (haystack.includes('grocery') || haystack.includes('superstore') || haystack.includes('whole foods') ||
-      haystack.includes('freshco') || haystack.includes('loblaws') || haystack.includes('metro') ||
-      haystack.includes('no frills') || haystack.includes('sobeys') || haystack.includes('t t ') ||
-      haystack.includes('farm boy') || haystack.includes('costco')) {
-    boost('groceries', 5)
-  }
-  // Travelling
-  if (haystack.includes('uber') || haystack.includes('lyft') || haystack.includes('ferry') ||
-      haystack.includes('transit') || haystack.includes('bus ') || haystack.includes('sky train') ||
-      haystack.includes('taxi') || haystack.includes('parking') || haystack.includes('gas ') ||
-      haystack.includes('petro') || haystack.includes('esso') || haystack.includes('shell ') ||
-      haystack.includes('flight') || haystack.includes('airline') || haystack.includes('hotel')) {
-    boost('travelling', 5)
-  }
-  // Rent
-  if (haystack.includes('rent') || haystack.includes('landlord') || haystack.includes('e transfer')) {
-    boost('rent', 6)
-  }
-  // Utilities
-  if (haystack.includes('hydro') || haystack.includes('internet') || haystack.includes('telus') ||
-      haystack.includes('rogers') || haystack.includes('bell ') || haystack.includes('shaw') ||
-      haystack.includes('bc hydro') || haystack.includes('fortis') || haystack.includes('enbridge') ||
-      haystack.includes('water') || haystack.includes('gas bill')) {
-    boost('utilities', 5)
-  }
-  // Mobile
-  if (haystack.includes('mobile') || haystack.includes('wireless') || haystack.includes('cellular') ||
-      haystack.includes('koodo') || haystack.includes('fido') || haystack.includes('freedom')) {
-    boost('mobile', 5)
-  }
-  // Dinners / restaurants
-  if (haystack.includes('dinner') || haystack.includes('restaurant') || haystack.includes('eat') ||
-      haystack.includes('pizza') || haystack.includes('sushi') || haystack.includes('burger') ||
-      haystack.includes('mcdonalds') || haystack.includes('subway') || haystack.includes('kfc') ||
-      haystack.includes('doordash') || haystack.includes('skip') || haystack.includes('uber eats') ||
-      haystack.includes('grubhub') || haystack.includes('bar ')) {
-    boost('dinners', 5)
-  }
-  // Household items
-  if (haystack.includes('ikea') || haystack.includes('bed bath') || haystack.includes('canadian tire') ||
-      haystack.includes('home depot') || haystack.includes('rona') || haystack.includes('hardware') ||
-      haystack.includes('home goods') || haystack.includes('the bay') || haystack.includes('winners')) {
-    boost('household-items', 5)
-  }
-  // Shopping / clothing
-  if (haystack.includes('amazon') || haystack.includes('walmart') || haystack.includes('target') ||
-      haystack.includes('zara') || haystack.includes('h m') || haystack.includes('uniqlo') ||
-      haystack.includes('sport chek') || haystack.includes('bestbuy') || haystack.includes('apple store')) {
-    boost('shopping', 5)
-  }
-  // Subscriptions / streaming
-  if (haystack.includes('netflix') || haystack.includes('spotify') || haystack.includes('apple') ||
-      haystack.includes('google') || haystack.includes('microsoft') || haystack.includes('adobe') ||
-      haystack.includes('subscription') || haystack.includes('prime') || haystack.includes('hulu') ||
-      haystack.includes('disney') || haystack.includes('youtube')) {
-    boost('subscriptions', 5)
-  }
-  // Gifts
-  if (haystack.includes('gift') || haystack.includes('flowers') || haystack.includes('1 800')) {
-    boost('gifts', 5)
-  }
-  // Personal care
-  if (haystack.includes('salon') || haystack.includes('spa') || haystack.includes('pharmacy') ||
-      haystack.includes('shoppers') || haystack.includes('rexall') || haystack.includes('london drugs') ||
-      haystack.includes('barber') || haystack.includes('haircut') || haystack.includes('gym') ||
-      haystack.includes('fitness') || haystack.includes('yoga') || haystack.includes('doctor') ||
-      haystack.includes('dental') || haystack.includes('optom')) {
-    boost('personal', 5)
-  }
-  // Fallback ambiguous
-  if (haystack.includes('amazon') || haystack.includes('walmart')) {
-    boost('miscellaneous', 2)
+  for (const group of CATEGORY_KEYWORDS) {
+    const matched = group.keywords.some((kw) => haystack.includes(kw))
+    if (!matched) continue
+
+    const category = activeCategories.find(
+      (c) => c.slug === group.slugHint || c.slug.includes(group.slugHint) || group.slugHint.includes(c.slug),
+    )
+    if (category) {
+      scoreById.set(category.id, (scoreById.get(category.id) ?? 0) + 5)
+    }
   }
 
   const fallback = categories.find((category) => category.slug === 'miscellaneous') ?? categories[0] ?? null
-  const winner = categories
-    .filter((category) => category.kind === 'expense' && category.isActive)
-    .sort((left, right) => (scoreBySlug.get(right.slug) ?? 0) - (scoreBySlug.get(left.slug) ?? 0))[0]
+  const winner = activeCategories
+    .filter((category) => (scoreById.get(category.id) ?? 0) > 0)
+    .sort((left, right) => (scoreById.get(right.id) ?? 0) - (scoreById.get(left.id) ?? 0))[0]
 
-  const categoryId =
-    (winner && (scoreBySlug.get(winner.slug) ?? 0) > 0 ? winner.id : fallback?.id) ?? null
+  const categoryId = (winner?.id ?? fallback?.id) ?? null
 
   return {
     rowId: row.rowId,
@@ -131,7 +79,7 @@ function heuristicSuggestion(
       : 'No strong merchant pattern matched, so the fallback category was used.',
     provider: 'heuristic',
     model: 'local-heuristic-v1',
-    rawJson: JSON.stringify({ haystack, scores: Object.fromEntries(scoreBySlug) }),
+    rawJson: JSON.stringify({ haystack, scores: Object.fromEntries(scoreById) }),
   }
 }
 

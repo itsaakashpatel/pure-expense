@@ -2,10 +2,8 @@ import type { D1Database, D1Result } from '@cloudflare/workers-types'
 import type {
   Category,
   DashboardMonthSummary,
-  HistoricalEntry,
   ImportRow,
   ImportSummary,
-  MonthlySnapshot,
   TransactionRecord,
 } from '../shared/types'
 import { toImportMetadata } from './utils'
@@ -124,60 +122,6 @@ export function mapImportRow(row: {
   }
 }
 
-export function mapMonthlySnapshot(row: {
-  id: string
-  import_id: string
-  month: string
-  category_id: string | null
-  amount_cents: number
-  currency: string
-  section: string
-  note: string
-}): MonthlySnapshot {
-  return {
-    id: row.id,
-    importId: row.import_id,
-    month: row.month,
-    categoryId: row.category_id,
-    amountCents: row.amount_cents,
-    currency: row.currency,
-    section: row.section === 'income' ? 'income' : 'expense',
-    note: row.note,
-  }
-}
-
-export function mapHistoricalEntry(row: {
-  id: string
-  import_id: string
-  snapshot_id: string | null
-  month: string
-  category_id: string | null
-  amount_cents: number
-  currency: string
-  section: string
-  display_order: number
-  entry_label: string
-  row_note: string
-  source_row_index: number
-  source_column_index: number
-}): HistoricalEntry {
-  return {
-    id: row.id,
-    importId: row.import_id,
-    snapshotId: row.snapshot_id,
-    month: row.month,
-    categoryId: row.category_id,
-    amountCents: row.amount_cents,
-    currency: row.currency,
-    section: row.section === 'income' ? 'income' : 'expense',
-    displayOrder: row.display_order,
-    entryLabel: row.entry_label,
-    rowNote: row.row_note,
-    sourceRowIndex: row.source_row_index,
-    sourceColumnIndex: row.source_column_index,
-  }
-}
-
 export function mapTransactionRecord(row: {
   id: string
   occurred_at: string | null
@@ -189,6 +133,7 @@ export function mapTransactionRecord(row: {
   category_id: string | null
   category_name: string | null
   source_type: string
+  is_confirmed?: number
   created_at: string
 }): TransactionRecord {
   return {
@@ -202,6 +147,7 @@ export function mapTransactionRecord(row: {
     categoryId: row.category_id,
     categoryName: row.category_name,
     sourceType: row.source_type as TransactionRecord['sourceType'],
+    isConfirmed: row.is_confirmed !== 0,
     createdAt: row.created_at,
   }
 }
@@ -209,11 +155,10 @@ export function mapTransactionRecord(row: {
 export function normalizeTrendRow(row: {
   month: string
   total_cents: number
-  source: string
 }): DashboardMonthSummary {
   return {
     month: row.month,
     totalCents: row.total_cents,
-    source: row.source === 'transactions' ? 'transactions' : 'snapshots',
+    source: 'transactions',
   }
 }

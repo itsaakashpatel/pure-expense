@@ -1,5 +1,6 @@
 import { pickStatementMonth, parseDateToIso, parseMoneyToCents } from '../utils'
 import type { ParsedFileResult, ParsedImportRow } from './types'
+import { tryParseAmexPdf } from './amexPdf'
 
 function decodePdfBinary(buffer: ArrayBuffer): string {
   return new TextDecoder('latin1').decode(buffer)
@@ -60,6 +61,11 @@ export async function parseStatementPdf(
   file: File,
   filename: string,
 ): Promise<ParsedFileResult> {
+  // Try Amex-specific parser first (handles Amex Cobalt / any Amex CA statement)
+  const amexResult = await tryParseAmexPdf(file)
+  if (amexResult) return amexResult
+
+  // ── Generic heuristic fallback ──────────────────────────────────
   const buffer = await file.arrayBuffer()
   const raw = decodePdfBinary(buffer)
   const literalStrings = extractLiteralStrings(raw)
@@ -87,8 +93,6 @@ export async function parseStatementPdf(
     ),
     currency: 'CAD',
     rows,
-    snapshots: [],
-    historicalEntries: [],
     notes: [],
     warnings,
   }

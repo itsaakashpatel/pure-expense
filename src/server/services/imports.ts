@@ -3,16 +3,14 @@ import type { CommitImportRequest, ImportDetailResponse, ImportSummary } from '.
 import {
   allRows,
   firstRow,
-  mapHistoricalEntry,
   mapImportRow,
   mapImportSummary,
-  mapMonthlySnapshot,
   runStatement,
 } from '../db'
 import { parseUpload } from '../parsers'
 import type { ParsedFileResult } from '../parsers/types'
 import { suggestCategoriesWithAI } from './ai'
-import { ensureCategory, listCategories } from './categories'
+import { listCategories } from './categories'
 import { createId, formatMonth, normalizeMerchant } from '../utils'
 
 type ImportRowRecord = {
@@ -50,33 +48,6 @@ type ImportSummaryRow = {
   metadata_json: string
 }
 
-type MonthlySnapshotRow = {
-  id: string
-  import_id: string
-  month: string
-  category_id: string | null
-  amount_cents: number
-  currency: string
-  section: string
-  note: string
-}
-
-type HistoricalEntryRow = {
-  id: string
-  import_id: string
-  snapshot_id: string | null
-  month: string
-  category_id: string | null
-  amount_cents: number
-  currency: string
-  section: string
-  display_order: number
-  entry_label: string
-  row_note: string
-  source_row_index: number
-  source_column_index: number
-}
-
 type MerchantRuleRow = {
   id: string
   category_id: string
@@ -102,7 +73,8 @@ async function loadImportSummary(db: D1Database, importId: string): Promise<Impo
     `SELECT id, filename, import_mode, source_type, statement_month, currency,
             parsing_status, commit_status, row_count, created_at, updated_at, metadata_json
      FROM imports
-     WHERE id = ?`,
+     WHERE id = ?
+       AND deleted_at IS NULL`,
     importId,
   )
 
@@ -113,12 +85,28 @@ async function loadImportSummary(db: D1Database, importId: string): Promise<Impo
   return mapImportSummary(row)
 }
 
+export async function deleteImport(db: D1Database, importId: string): Promise<void> {
+  const existing = await firstRow<{ id: string; commit_status: string; row_count: number }>(
+    db,
+    `SELECT id, commit_status, row_count FROM imports WHERE id = ? AND deleted_at IS NULL`,
+    importId,
+  )
+  if (!existing) throw new Error('Import not found.')
+  if (existing.commit_status === 'committed' && existing.row_count > 0) {
+    throw new Error(
+      'This import has already been committed. Delete the individual transactions instead.',
+    )
+  }
+  await runStatement(db, `UPDATE imports SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?`, importId)
+}
+
 export async function listImports(db: D1Database): Promise<ImportSummary[]> {
   const rows = await allRows<ImportSummaryRow>(
     db,
     `SELECT id, filename, import_mode, source_type, statement_month, currency,
             parsing_status, commit_status, row_count, created_at, updated_at, metadata_json
      FROM imports
+     WHERE deleted_at IS NULL
      ORDER BY created_at DESC`,
   )
 
@@ -129,7 +117,7 @@ export async function getImportDetail(
   db: D1Database,
   importId: string,
 ): Promise<ImportDetailResponse> {
-  const [summary, rowRecords, snapshotRecords, historicalEntryRecords, categories] = await Promise.all([
+  const [summary, rowRecords, categories] = await Promise.all([
     loadImportSummary(db, importId),
     allRows<ImportRowRecord>(
       db,
@@ -141,85 +129,13 @@ export async function getImportDetail(
        ORDER BY occurred_at IS NULL, occurred_at ASC, id ASC`,
       importId,
     ),
-    allRows<MonthlySnapshotRow>(
-      db,
-      `SELECT id, import_id, month, category_id, amount_cents, currency, section, note
-       FROM monthly_snapshots
-       WHERE import_id = ?
-       ORDER BY section ASC, amount_cents DESC`,
-      importId,
-    ),
-    allRows<HistoricalEntryRow>(
-      db,
-      `SELECT id, import_id, snapshot_id, month, category_id, amount_cents, currency, section,
-              display_order, entry_label, row_note, source_row_index, source_column_index
-       FROM historical_entries
-       WHERE import_id = ?
-       ORDER BY category_id ASC, display_order ASC, source_row_index ASC`,
-      importId,
-    ),
     listCategories(db),
   ])
 
   return {
     import: summary,
     rows: rowRecords.map(mapImportRow),
-    snapshots: snapshotRecords.map(mapMonthlySnapshot),
-    historicalEntries: historicalEntryRecords.map(mapHistoricalEntry),
     categories,
-  }
-}
-
-async function persistHistoricalImport(
-  db: D1Database,
-  importId: string,
-  parsed: ParsedFileResult,
-): Promise<void> {
-  const month = parsed.statementMonth ?? formatMonth(new Date())
-
-  for (const snapshot of parsed.snapshots) {
-    const category = await ensureCategory(db, snapshot.categoryName, snapshot.section)
-    const snapshotId = createId('snap')
-    await runStatement(
-      db,
-      `INSERT INTO monthly_snapshots (id, import_id, month, category_id, amount_cents, currency, section, note)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      snapshotId,
-      importId,
-      month,
-      category.id,
-      snapshot.amountCents,
-      parsed.currency,
-      snapshot.section,
-      snapshot.note,
-    )
-
-    const entriesForCategory = parsed.historicalEntries.filter(
-      (entry) => entry.categoryName === snapshot.categoryName && entry.section === snapshot.section,
-    )
-
-    for (const entry of entriesForCategory) {
-      await runStatement(
-        db,
-        `INSERT INTO historical_entries (
-          id, import_id, snapshot_id, month, category_id, amount_cents, currency, section,
-          display_order, entry_label, row_note, source_row_index, source_column_index
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        createId('hen'),
-        importId,
-        snapshotId,
-        month,
-        category.id,
-        entry.amountCents,
-        parsed.currency,
-        entry.section,
-        entry.displayOrder,
-        entry.entryLabel,
-        entry.rowNote,
-        entry.sourceRowIndex,
-        entry.sourceColumnIndex,
-      )
-    }
   }
 }
 
@@ -404,24 +320,18 @@ export async function createImportFromFile(
     OPENAI_MODEL?: string
   },
   file: File,
-  requestedMode: string | null,
 ): Promise<ImportDetailResponse> {
-  const parsed = await parseUpload(file, requestedMode)
+  const parsed = await parseUpload(file)
   const importId = createId('imp')
   const statementMonth = parsed.statementMonth ?? formatMonth(new Date())
-  const rowCount =
-    parsed.importMode === 'historical-summary' ? parsed.historicalEntries.length : parsed.rows.length
+  const rowCount = parsed.rows.length
 
   const parsingStatus =
-    parsed.importMode === 'historical-summary'
-      ? 'imported'
-      : parsed.rows.length > 0
-        ? 'review_ready'
-        : parsed.warnings.length
-          ? 'awaiting_template'
-          : 'needs_attention'
-
-  const commitStatus = parsed.importMode === 'historical-summary' ? 'committed' : 'draft'
+    parsed.rows.length > 0
+      ? 'review_ready'
+      : parsed.warnings.length
+        ? 'awaiting_template'
+        : 'needs_attention'
 
   await runStatement(
     db,
@@ -429,20 +339,15 @@ export async function createImportFromFile(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     importId,
     file.name,
-    parsed.importMode,
+    'statement',
     parsed.sourceType,
     statementMonth,
     parsed.currency,
     parsingStatus,
-    commitStatus,
+    'draft',
     rowCount,
     buildMetadata(parsed),
   )
-
-  if (parsed.importMode === 'historical-summary') {
-    await persistHistoricalImport(db, importId, parsed)
-    return getImportDetail(db, importId)
-  }
 
   for (const row of parsed.rows) {
     await runStatement(

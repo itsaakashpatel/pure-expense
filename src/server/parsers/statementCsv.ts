@@ -102,8 +102,6 @@ export function parseStatementCsv(text: string, filename: string): ParsedFileRes
     ),
     currency: 'CAD',
     rows,
-    snapshots: [],
-    historicalEntries: [],
     notes: [],
     warnings,
   }

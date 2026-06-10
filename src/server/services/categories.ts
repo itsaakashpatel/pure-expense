@@ -69,8 +69,21 @@ export async function createCategory(
   db: D1Database,
   name: string,
   kind: 'expense' | 'income',
-): Promise<Category> {
-  return ensureCategory(db, name, kind)
+): Promise<{ category: Category; wasExisting: boolean }> {
+  const existing = await firstRow<CategoryRow>(
+    db,
+    `SELECT id, name, slug, kind, sort_order, is_active
+     FROM categories
+     WHERE name = ? COLLATE NOCASE`,
+    name,
+  )
+
+  if (existing) {
+    return { category: mapCategory(existing), wasExisting: true }
+  }
+
+  const category = await ensureCategory(db, name, kind)
+  return { category, wasExisting: false }
 }
 
 async function mergeCategories(
@@ -81,12 +94,6 @@ async function mergeCategories(
   await runStatement(
     db,
     'UPDATE transactions SET category_id = ? WHERE category_id = ?',
-    targetCategoryId,
-    sourceCategoryId,
-  )
-  await runStatement(
-    db,
-    'UPDATE monthly_snapshots SET category_id = ? WHERE category_id = ?',
     targetCategoryId,
     sourceCategoryId,
   )
@@ -144,6 +151,7 @@ export async function patchCategory(
   }
 
   const nextName = payload.name?.trim() || existing.name
+  const nextSlug = payload.name?.trim() ? slugify(payload.name.trim()) || existing.slug : existing.slug
   const nextKind = ensureCategoryKind(payload.kind ?? existing.kind)
   const nextSortOrder = payload.sortOrder ?? existing.sort_order
   const nextActive =
@@ -152,9 +160,10 @@ export async function patchCategory(
   await runStatement(
     db,
     `UPDATE categories
-     SET name = ?, kind = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+     SET name = ?, slug = ?, kind = ?, sort_order = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
      WHERE id = ?`,
     nextName,
+    nextSlug,
     nextKind,
     nextSortOrder,
     nextActive,
